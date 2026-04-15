@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WizBuddy - School Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #e6f0ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            width: 420px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: #004aad;
+            color: white;
+            padding: 15px;
+            font-size: 20px;
+            text-align: center;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin: 6px 0;
+            padding: 8px 12px;
+            border-radius: 10px;
+            max-width: 75%;
+        }
+
+        .user {
+            background: #d1e7ff;
+            align-self: flex-end;
+        }
+
+        .bot {
+            background: #f1f1f1;
+            align-self: flex-start;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            gap: 5px;
+            border-top: 1px solid #ccc;
+        }
+
+        input {
+            flex: 1;
+            padding: 8px;
+        }
+
+        button {
+            padding: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        🤖 WizBuddy
+        <button onclick="clearChat()" style="float:right;font-size:12px;">Clear</button>
+    </div>
+
+    <div class="chat-box" id="chatBox"></div>
+
+    <div class="chat-input">
+        <input type="text" id="userInput" placeholder="Ask about teachers or principal...">
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="startVoice()">🎤</button>
+    </div>
+</div>
+
+<script>
+/* ---------- SCHOOL DATA ---------- */
+const school = {
+    principal: "Mrs. Sowjanya",
+    deen: "Mr Raju",
+    primary_incharge: "Mrs Hema",
+    c_batch_incharge: "Mr Kumar", // ✅ Added
+    location: "Rajahmundry",
+    school_name: "Sri Chaitanya techno school",
+    R_I: "Uday Sankar",
+
+    grades: {
+        "grade 1": { mother:"Haritha & Priya", telugu:"Venkata Lakshmi", english:"Haritha", hindi:"Parween", maths:"Prasanna", science:"Haritha", ict:"Aruna", arts:"Bhargavi"},
+        "grade 2": { mother:"Vijay Lakshmi and Tulasi", telugu:"Venkata Lakshmi", english:"Vijay Lakshmi and Tulasi", hindi:"Parween", maths:"Prasanna", science:"Vijay Lakshmi", ict:"Aruna", arts:"Bhargavi"},
+        "grade 3": { telugu:"Devi", english:"Vijay Lakshmi and Tulasi", hindi:"Ramani", maths:"Harika", science:"Vijay Lakshmi and Tulasi", social:"Krishnaja", ict:"Aruna", arts:"Bhargavi"},
+        "grade 4": { telugu:"Devi", english:"Sandhya", hindi:"Ramani", maths:"Harika", science:"Ramya", social:"Krishnaja", ict:"Aruna", arts:"Bhargavi"},
+        "grade 5": { telugu:"Devi", english:"Sandhya", hindi:"Ramani", maths:"Harika", science:"Ramya", social:"Krishnaja", ict:"Aruna", arts:"Bhargavi"}
+    }
+};
+
+const chatBox = document.getElementById("chatBox");
+let lastBotAnswer = "";
+
+/* ---------- LOAD CHAT HISTORY ---------- */
+window.onload = () => {
+    const saved = JSON.parse(localStorage.getItem("wizbuddyChat")) || [];
+    saved.forEach(m => addMessage(m.text, m.sender, false));
+};
+
+/* ---------- SAVE MESSAGE ---------- */
+function saveMessage(text, sender) {
+    const history = JSON.parse(localStorage.getItem("wizbuddyChat")) || [];
+    history.push({ text, sender });
+    localStorage.setItem("wizbuddyChat", JSON.stringify(history));
+}
+
+/* ---------- ADD MESSAGE ---------- */
+function addMessage(text, sender, save = true) {
+    const msg = document.createElement("div");
+    msg.className = "message " + sender;
+    msg.innerText = text;
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    if (save) saveMessage(text, sender);
+}
+
+/* ---------- SEND TEXT MESSAGE ---------- */
+function sendMessage() {
+    const input = document.getElementById("userInput");
+    const question = input.value.toLowerCase();
+    if (!question.trim()) return;
+
+    addMessage(input.value, "user");
+    input.value = "";
+    processQuestion(question);
+}
+
+/* ---------- PROCESS QUESTION ---------- */
+function processQuestion(q) {
+    let answer = "";
+
+    if (q.includes("clear chat")) {
+        clearChat();
+        answer = "Chat cleared successfully";
+    }
+    else if (q.includes("repeat")) {
+        answer = lastBotAnswer || "Nothing to repeat";
+    }
+    else if (q.includes("hello")) {
+        answer = "Hello! I am WizBuddy. How can I help you?";
+    }
+    else if (q.includes("history")) {
+        answer = "Your previous questions and answers are visible on the screen";
+    }
+    else if (q.includes("principal")) {
+        answer = "The principal is " + school.principal;
+    }
+    else if (q.includes("deen")) {
+        answer = "The deen is " + school.deen;
+    }
+    else if (q.includes("c batch incharge")) {
+        answer = "The c batch incharge is " + school.c_batch_incharge;
+    }
+    else if (q.includes("primary incharge")) {
+        answer = "The primary incharge is " + school.primary_incharge;
+    }
+    else if (q.includes("where") || q.includes("located") || q.includes("location")) {
+        answer = "The school is located in " + school.location;
+    }
+    else if (q.includes("school name")) {
+        answer = "The school name is " + school.school_name;
+    }
+    else {
+        for (let grade in school.grades) {
+            if (q.includes(grade)) {
+                for (let subject in school.grades[grade]) {
+                    if (q.includes(subject)) {
+                        answer = `The ${subject} teacher of ${grade} is ${school.grades[grade][subject]}`;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!answer) answer = "Sorry, I don't understand.";
+
+    setTimeout(() => {
+        addMessage(answer, "bot");
+        lastBotAnswer = answer;
+        speak(answer);
+    }, 400);
+}
+
+/* ---------- VOICE INPUT ---------- */
+function startVoice() {
+    const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    rec.lang = "en-IN";
+    rec.start();
+
+    rec.onresult = e => {
+        document.getElementById("userInput").value = e.results[0][0].transcript;
+        sendMessage();
+    };
+}
+
+/* ---------- VOICE OUTPUT ---------- */
+function speak(text) {
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = "en-IN";
+    window.speechSynthesis.speak(speech);
+}
+
+/* ---------- CLEAR CHAT ---------- */
+function clearChat() {
+    localStorage.removeItem("wizbuddyChat");
+    chatBox.innerHTML = "";
+}
+</script>
+
+</body>
+</html>
